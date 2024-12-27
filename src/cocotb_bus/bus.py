@@ -7,6 +7,7 @@
 """Common bus related functionality.
 A bus is simply defined as a collection of signals.
 """
+import re
 
 def _build_sig_attr_dict(signals):
     if isinstance(signals, dict):
