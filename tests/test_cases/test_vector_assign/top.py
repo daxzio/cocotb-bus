@@ -48,7 +48,7 @@ class testbench:
        await self.wait_clkn(length)
 
 @test()
-async def test_idcode(dut):
+async def test_vector_assign(dut):
     
     tb = testbench(dut)
     tb.bus0.a.value = 0
