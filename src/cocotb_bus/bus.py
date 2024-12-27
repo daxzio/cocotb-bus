@@ -12,7 +12,7 @@ def _build_sig_attr_dict(signals):
     if isinstance(signals, dict):
         return signals
     else:
-        return {sig: sig for sig in signals}
+        return {sig: sig for sig in signals}        
 
 
 class Bus:
@@ -52,7 +52,12 @@ class Bus:
         self._entity = entity
         self._name = name
         self._signals = {}
+        i = 0
         for attr_name, sig_name in _build_sig_attr_dict(signals).items():
+            array_idx = None
+            if g := re.search(r"(.+)\[(\d+)\]", sig_name):
+                sig_name = g.group(1)
+                array_idx = int(g.group(2))
             if name:
                 signame = name + bus_separator + sig_name
             else:
@@ -62,6 +67,7 @@ class Bus:
 
         # Also support a set of optional signals that don't have to be present
         for attr_name, sig_name in _build_sig_attr_dict(optional_signals).items():
+            array_idx = None
             if name:
                 signame = name + bus_separator + sig_name
             else:
