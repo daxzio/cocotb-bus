@@ -3,6 +3,9 @@
 # Copyright (c) 2013 SolarFlare Communications Inc
 # Licensed under the Revised BSD License, see LICENSE for details.
 # SPDX-License-Identifier: BSD-3-Clause
+import re
+from cocotb import simulator
+from cocotb.types import LogicArray
 
 """Common bus related functionality.
 A bus is simply defined as a collection of signals.
@@ -13,8 +16,40 @@ def _build_sig_attr_dict(signals):
     if isinstance(signals, dict):
         return signals
     else:
-        return {sig: sig for sig in signals}        
+        return {sig: sig for sig in signals}
+from cocotb.utils import get_sim_time
+        
 
+class LogicObjectSubScript:
+    last = {}
+    temp = {}
+    
+    def __init__(self, handle: simulator.gpi_sim_hdl, index: int) -> None:
+        self.handle = handle
+        self.index = index
+        if not self.handle._name in self.last.keys():
+            self.last[self.handle._name] = get_sim_time("step")-1
+
+    @property
+    def value(self) -> LogicArray:
+#         binstr = self._handle.get_signal_val_binstr()
+#         print("return self.handle.value[self.index]",  self.handle)
+        return self.handle.value[self.index]
+
+    @value.setter
+    def value(self, value: LogicArray) -> None:
+#         self.set(value)
+        now = get_sim_time("step")
+#         print("set self.handle.value[self.index]", self.handle, self.handle._name, self.index, value, now, self.last)
+        if not now == self.last[self.handle._name]:
+#             print(True)
+            self.temp[self.handle._name] = self.handle.value
+#         print(self.temp[self.handle._name])
+        self.temp[self.handle._name][self.index] = value
+#         print(self.temp[self.handle._name])
+        self.handle.value = self.temp[self.handle._name]
+#         self.handle.value[self.index] = value
+        self.last[self.handle._name] = now
 
 class Bus:
     """Wraps up a collection of signals.
@@ -64,6 +99,7 @@ class Bus:
             else:
                 signame = sig_name
 
+#             print(attr_name, sig_name, signame, name, array_idx, case_insensitive)
             self._add_signal(attr_name, signame, array_idx, case_insensitive)
 
         # Also support a set of optional signals that don't have to be present
@@ -88,6 +124,7 @@ class Bus:
         return None
 
     def _add_signal(self, attr_name, signame, array_idx=None, case_insensitive=True):
+#         print("Signal name {}, idx {}".format(signame, array_idx))
         self._entity._log.debug("Signal name {}, idx {}".format(signame, array_idx))
         if case_insensitive:
             handle = self._caseInsensGetattr(self._entity, signame)
@@ -95,8 +132,13 @@ class Bus:
             handle = getattr(self._entity, signame)
         if array_idx is not None:
             handle = handle[array_idx]
+#             print(attr_name, handle, handle.value[0])
+#             handle = LogicObjectSubScript(handle, array_idx)
+            
+            
         setattr(self, attr_name, handle)
         self._signals[attr_name] = getattr(self, attr_name)
+#         print("self._signals[attr_name]", self._signals[attr_name], self._signals[attr_name].value)
 
     def drive(self, obj, strict=False):
         """Drives values onto the bus.
